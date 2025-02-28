@@ -1,13 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import Stripe from 'stripe';
 import { envs } from '../config/envs';
 import { PaymentSessionDto } from './dto/payment-session.dto';
 import { Request, Response } from 'express';
+import { NATS_SERVICE } from 'src/config';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class PaymentsService {
 
     private readonly stripe = new Stripe( envs.stripeSecret );
+    private readonly logger = new Logger('PaymentService');
+
+    constructor(
+        @Inject(NATS_SERVICE) private readonly client: ClientProxy
+    ){ }
 
     async createPaymentSession( paymentSessionDto: PaymentSessionDto ){
 
@@ -39,7 +46,11 @@ export class PaymentsService {
             ,cancel_url : envs.stripeCancelUrl
         });
 
-        return session;
+        return {
+            cancelUrL   : session.cancel_url
+            ,successUrl : session.success_url
+            ,url        : session.url
+        };
     }
 
     async stripeWebhook( req: Request, res: Response ){
@@ -54,14 +65,18 @@ export class PaymentsService {
             res.sendStatus(400).send(`Webhook Error: ${ error.message }`);
             return;
         }
-        console.log({event});
+        //console.log({event});
         switch ( event.type ) {
             case 'charge.succeeded':
                 const chargeSucceeded = event.data.object;
-                // TODO: llamar a nuestro microservicio
-                console.log( {
-                    metadata: chargeSucceeded.metadata
-                } );
+                const payload = {
+                    stripePaymentId : chargeSucceeded.id
+                    ,nIdOrder       : chargeSucceeded.metadata.nIdOrder
+                    ,receipUrl      : chargeSucceeded.receipt_url
+                }
+                this.logger.log( {payload} );
+                this.client.emit( 'payment.succeeded', payload );
+                
             break;
 
             default:
