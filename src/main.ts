@@ -7,9 +7,11 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 async function bootstrap() {
 
     const logger = new Logger('Payments microservice');
+
     const app = await NestFactory.create(AppModule, {
         rawBody: true
     });
+    
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
