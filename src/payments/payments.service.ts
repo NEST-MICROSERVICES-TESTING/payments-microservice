@@ -62,7 +62,7 @@ export class PaymentsService {
         try {
             event = this.stripe.webhooks.constructEvent( req['rawBody'], signature!, endpointSecret );
         } catch (error) {
-            res.sendStatus(400).send(`Webhook Error: ${ error.message }`);
+            res.status(400).send(`Webhook Error: ${ error.message }`);
             return;
         }
         //console.log({event});
