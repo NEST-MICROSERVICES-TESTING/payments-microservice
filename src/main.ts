@@ -19,18 +19,21 @@ async function bootstrap() {
         })
     );
 
-    app.connectMicroservice<MicroserviceOptions>({
-        transport: Transport.NATS
-        ,options: {
-            servers: envs.natsServers
-        }
-    },{
-        inheritAppConfig: true 
-    });
+    app.connectMicroservice<MicroserviceOptions>(
+        {
+            transport: Transport.NATS
+            ,options: {
+                servers: envs.natsServers
+            }
+        },
+        { inheritAppConfig: true }
+    );
 
     await app.startAllMicroservices();
 
     await app.listen( envs.port);
+
+    console.log('Health Check configured');
 
     logger.log(`Payments microservice running on port ${ envs.port }`);
 }
